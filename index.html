@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ember & Stone — Restaurant</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d0a08;
+    --surface: #16120e;
+    --card: #1e1812;
+    --gold: #c9943a;
+    --gold-light: #e8b86d;
+    --cream: #f5ede0;
+    --muted: #8a7a68;
+    --accent: #e05c3a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(201,148,58,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(224,92,58,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 70px 20px 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(48px, 8vw, 86px);
+    font-weight: 900;
+    line-height: 0.9;
+    color: var(--cream);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--gold-light);
+  }
+
+  .hero-subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 280px;
+    margin: 32px auto;
+  }
+  .divider-line { flex: 1; height: 0.5px; background: var(--gold); opacity: 0.3; }
+  .divider-diamond {
+    width: 6px; height: 6px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    opacity: 0.6;
+  }
+
+  /* Scene container */
+  .scene-container {
+    perspective: 1200px;
+    padding: 20px 20px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 28px;
+    max-width: 1100px;
+    margin: 0 auto;
+    transform-style: preserve-3d;
+  }
+
+  /* Card 3D */
+  .card-wrapper {
+    perspective: 800px;
+  }
+
+  .menu-card {
+    background: var(--card);
+    border: 0.5px solid rgba(201,148,58,0.15);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transform: translateZ(0) rotateX(0deg) rotateY(0deg);
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1),
+                border-color 0.3s ease,
+                box-shadow 0.4s ease;
+    transform-style: preserve-3d;
+    position: relative;
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.5),
+      0 2px 8px rgba(0,0,0,0.3),
+      inset 0 0.5px 0 rgba(255,255,255,0.04);
+    will-change: transform;
+  }
+
+  .menu-card:hover {
+    border-color: rgba(201,148,58,0.4);
+    box-shadow:
+      0 24px 64px rgba(0,0,0,0.7),
+      0 8px 24px rgba(201,148,58,0.12),
+      inset 0 0.5px 0 rgba(255,255,255,0.06);
+  }
+
+  .menu-card.active {
+    border-color: rgba(201,148,58,0.6);
+  }
+
+  /* Plate visual */
+  .card-visual {
+    height: 200px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .plate-scene {
+    width: 160px;
+    height: 160px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+  }
+
+  .menu-card:hover .plate-scene {
+    transform: translateY(-8px) rotateX(8deg);
+  }
+
+  .plate {
+    width: 160px;
+    height: 60px;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    box-shadow:
+      0 8px 20px rgba(0,0,0,0.6),
+      0 2px 6px rgba(0,0,0,0.4),
+      inset 0 -2px 8px rgba(0,0,0,0.3);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .plate-emoji {
+    font-size: 44px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+    transform: translateY(-6px);
+    transition: transform 0.3s ease;
+  }
+
+  .menu-card:hover .plate-emoji {
+    transform: translateY(-14px) scale(1.08);
+  }
+
+  .plate-shadow {
+    width: 130px;
+    height: 20px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.6) 0%, transparent 70%);
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .card-glow {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  .menu-card:hover .card-glow { opacity: 1; }
+
+  /* Card content */
+  .card-body {
+    padding: 20px 22px 22px;
+    position: relative;
+  }
+
+  .card-category {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
+    margin-bottom: 16px;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+
+  .card-price span {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .add-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 0.5px solid rgba(201,148,58,0.4);
+    background: transparent;
+    color: var(--gold);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    line-height: 1;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    padding-bottom: 1px;
+  }
+
+  .add-btn:hover {
+    background: var(--gold);
+    color: var(--bg);
+    border-color: var(--gold);
+    transform: scale(1.1) rotate(90deg);
+  }
+
+  .add-btn.added {
+    background: var(--gold);
+    color: var(--bg);
+    border-color: var(--gold);
+    font-size: 16px;
+  }
+
+  /* Rating dots */
+  .rating {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 6px;
+  }
+  .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: 0.3;
+  }
+  .dot.filled { opacity: 1; }
+
+  /* Cart bar */
+  .cart-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(22,18,14,0.97);
+    border-top: 0.5px solid rgba(201,148,58,0.2);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    backdrop-filter: blur(20px);
+  }
+  .cart-bar.visible { transform: translateY(0); }
+
+  .cart-info { display: flex; flex-direction: column; gap: 2px; }
+  .cart-count { font-size: 12px; color: var(--muted); letter-spacing: 0.1em; }
+  .cart-total { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--gold-light); }
+
+  .checkout-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 14px 32px;
+    border-radius: 40px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .checkout-btn:hover {
+    background: var(--gold-light);
+    transform: scale(1.02);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--card);
+    border: 0.5px solid rgba(201,148,58,0.3);
+    color: var(--cream);
+    padding: 12px 24px;
+    border-radius: 40px;
+    font-size: 14px;
+    z-index: 200;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Floating particles */
+  .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+  .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: 0;
+    animation: float-up 8s ease-in infinite;
+  }
+  @keyframes float-up {
+    0% { opacity: 0; transform: translateY(0) translateX(0); }
+    10% { opacity: 0.4; }
+    90% { opacity: 0.1; }
+    100% { opacity: 0; transform: translateY(-100vh) translateX(40px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="toast" id="toast">✓ Added to your order</div>
+
+<div class="hero">
+  <p class="hero-eyebrow">Fine Dining Experience</p>
+  <h1>Ember<br><em>&amp; Stone</em></h1>
+  <p class="hero-subtitle">Crafted with fire, plated with intention</p>
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-diamond"></div>
+    <div class="divider-line"></div>
+  </div>
+</div>
+
+<div class="scene-container">
+  <div class="menu-grid" id="menuGrid"></div>
+</div>
+
+<div class="cart-bar" id="cartBar">
+  <div class="cart-info">
+    <div class="cart-count" id="cartCount">0 items selected</div>
+    <div class="cart-total" id="cartTotal">$0.00</div>
+  </div>
+  <button class="checkout-btn" onclick="checkout()">Place Order →</button>
+</div>
+
+<script>
+const menuItems = [
+  {
+    id: 1,
+    name: "Wagyu Ribeye",
+    category: "Signature Cut",
+    desc: "A5 grade, wood-fire roasted with black truffle butter and aged balsamic reduction.",
+    price: 68,
+    emoji: "🥩",
+    color: "#3d1c12",
+    glow: "rgba(180,60,20,0.15)",
+    rating: 5
+  },
+  {
+    id: 2,
+    name: "Lobster Bisque",
+    category: "First Course",
+    desc: "Maine lobster, cognac cream, saffron oil, charred sourdough croutons.",
+    price: 28,
+    emoji: "🦞",
+    color: "#2a1820",
+    glow: "rgba(200,50,80,0.12)",
+    rating: 5
+  },
+  {
+    id: 3,
+    name: "Truffle Risotto",
+    category: "Pasta & Grains",
+    desc: "Carnaroli rice, aged parmesan, Périgord black truffle, micro herbs.",
+    price: 42,
+    emoji: "🍝",
+    color: "#251e10",
+    glow: "rgba(180,140,30,0.12)",
+    rating: 4
+  },
+  {
+    id: 4,
+    name: "Duck Confit",
+    category: "Poultry",
+    desc: "48-hour slow cooked duck leg, cherry gastrique, roasted fingerling potatoes.",
+    price: 38,
+    emoji: "🍗",
+    color: "#2a1c10",
+    glow: "rgba(200,120,20,0.12)",
+    rating: 5
+  },
+  {
+    id: 5,
+    name: "Sea Bass Crudo",
+    category: "Raw Bar",
+    desc: "Line-caught sea bass, yuzu kosho, crispy capers, edible florals.",
+    price: 32,
+    emoji: "🐟",
+    color: "#0f1e2a",
+    glow: "rgba(30,120,200,0.12)",
+    rating: 4
+  },
+  {
+    id: 6,
+    name: "Burrata Caprese",
+    category: "From the Garden",
+    desc: "Hand-pulled burrata, heirloom tomatoes, aged balsamic, Sicilian olive oil.",
+    price: 22,
+    emoji: "🧀",
+    color: "#1e1e10",
+    glow: "rgba(200,200,30,0.1)",
+    rating: 4
+  },
+  {
+    id: 7,
+    name: "Chocolate Soufflé",
+    category: "Dessert",
+    desc: "Valrhona 72% dark chocolate, espresso anglaise, Tahitian vanilla bean ice cream.",
+    price: 18,
+    emoji: "🍫",
+    color: "#1a1010",
+    glow: "rgba(150,60,20,0.12)",
+    rating: 5
+  },
+  {
+    id: 8,
+    name: "Rack of Lamb",
+    category: "Chef's Table",
+    desc: "Frenched rack, herb crust, pomegranate jus, roasted root vegetables.",
+    price: 54,
+    emoji: "🍖",
+    color: "#2a1515",
+    glow: "rgba(180,30,30,0.12)",
+    rating: 5
+  },
+  {
+    id: 9,
+    name: "Oysters Rockefeller",
+    category: "Raw Bar",
+    desc: "Kumamoto oysters, spinach, herbaceous cream, Pernod breadcrumbs.",
+    price: 26,
+    emoji: "🦪",
+    color: "#0f1e18",
+    glow: "rgba(30,160,100,0.1)",
+    rating: 4
+  },
+  {
+    id: 10,
+    name: "Tarte Tatin",
+    category: "Dessert",
+    desc: "Caramelized Granny Smith apple, buttery pastry, crème fraîche, calvados.",
+    price: 16,
+    emoji: "🥧",
+    color: "#251a0a",
+    glow: "rgba(200,150,30,0.1)",
+    rating: 4
+  }
+];
+
+const cart = {};
+
+function renderMenu() {
+  const grid = document.getElementById('menuGrid');
+  grid.innerHTML = menuItems.map(item => `
+    <div class="card-wrapper" id="wrapper-${item.id}">
+      <div class="menu-card" id="card-${item.id}" onmousemove="tilt(event,${item.id})" onmouseleave="resetTilt(${item.id})">
+        <div class="card-glow" style="background: radial-gradient(circle at 50% 50%, ${item.glow}, transparent 70%)"></div>
+        <div class="card-visual" style="background: ${item.color}">
+          <div class="plate-scene">
+            <div class="plate" style="background: linear-gradient(145deg, #2a2520, #1a1510)">
+              <div class="plate-emoji">${item.emoji}</div>
+            </div>
+            <div class="plate-shadow"></div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-category">${item.category}</div>
+          <div class="rating">${Array.from({length:5}).map((_,i) => `<div class="dot ${i < item.rating ? 'filled' : ''}"></div>`).join('')}</div>
+          <div class="card-name">${item.name}</div>
+          <div class="card-desc">${item.desc}</div>
+          <div class="card-footer">
+            <div class="card-price">$${item.price}<span>.00</span></div>
+            <button class="add-btn" id="btn-${item.id}" onclick="addToCart(${item.id})" title="Add to order">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function tilt(e, id) {
+  const card = document.getElementById(`card-${id}`);
+  const rect = card.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  const rx = (y - 0.5) * -12;
+  const ry = (x - 0.5) * 12;
+  card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(8px)`;
+}
+
+function resetTilt(id) {
+  const card = document.getElementById(`card-${id}`);
+  card.style.transform = `rotateX(0deg) rotateY(0deg) translateZ(0px)`;
+}
+
+function addToCart(id) {
+  const item = menuItems.find(i => i.id === id);
+  cart[id] = (cart[id] || 0) + 1;
+
+  const btn = document.getElementById(`btn-${id}`);
+  btn.classList.add('added');
+  btn.textContent = cart[id];
+
+  updateCartBar();
+  showToast(`${item.emoji} ${item.name} added`);
+}
+
+function updateCartBar() {
+  const total = Object.entries(cart).reduce((sum, [id, qty]) => {
+    return sum + menuItems.find(i => i.id == id).price * qty;
+  }, 0);
+  const count = Object.values(cart).reduce((a, b) => a + b, 0);
+
+  document.getElementById('cartCount').textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+  document.getElementById('cartTotal').textContent = `$${total.toFixed(2)}`;
+
+  const bar = document.getElementById('cartBar');
+  if (count > 0) bar.classList.add('visible');
+  else bar.classList.remove('visible');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = `✓ ${msg} — added to order`;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function checkout() {
+  const count = Object.values(cart).reduce((a, b) => a + b, 0);
+  showToast(`Order placed! ${count} item${count !== 1 ? 's' : ''} confirmed`);
+  setTimeout(() => {
+    Object.keys(cart).forEach(id => {
+      cart[id] = 0;
+      const btn = document.getElementById(`btn-${id}`);
+      if (btn) { btn.classList.remove('added'); btn.textContent = '+'; }
+    });
+    Object.keys(cart).forEach(k => delete cart[k]);
+    updateCartBar();
+  }, 600);
+}
+
+// Particles
+function createParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.bottom = '0';
+    p.style.animationDelay = Math.random() * 8 + 's';
+    p.style.animationDuration = (6 + Math.random() * 6) + 's';
+    p.style.opacity = Math.random() * 0.3;
+    container.appendChild(p);
+  }
+}
+
+renderMenu();
+createParticles();
+</script>
+</body>
+</html>
